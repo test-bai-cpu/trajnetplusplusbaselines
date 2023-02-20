@@ -40,6 +40,8 @@ def preprocess_test(scene, obs_len):
 
 
 def write_predictions(pred_list, scenes, model_name, dataset_name, args):
+    # args.obs_length = 8
+    print(args.obs_length)
     """Write predictions corresponding to the scenes in the respective file"""
     seq_length = args.obs_length + args.pred_length
     with open(args.path + '{}/{}'.format(model_name, dataset_name), "a") as myfile:
@@ -48,6 +50,9 @@ def write_predictions(pred_list, scenes, model_name, dataset_name, args):
             ## Extract 1) first_frame, 2) frame_diff 3) ped_ids for writing predictions
             observed_path = paths[0]
             frame_diff = observed_path[1].frame - observed_path[0].frame
+            # print("----------------")
+            # print(observed_path)
+            # print(args.obs_length)
             first_frame = observed_path[args.obs_length-1].frame + frame_diff
             ped_id = observed_path[0].pedestrian
             ped_id_ = []

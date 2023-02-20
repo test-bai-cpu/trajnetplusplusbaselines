@@ -122,6 +122,10 @@ class Trainer(object):
             batch_split.append(int(scene.shape[1]))
             batch_scene_goal.append(scene_goal)
 
+            # for yufei_index in range(len(batch_scene)):
+            #     yufei_test_scene = batch_scene[yufei_index]
+            #     print("--------" + str(yufei_index) + " and length is: " + str(len(yufei_test_scene)) + "------")
+            #     print(yufei_test_scene)
             if ((scene_i + 1) % self.batch_size == 0) or ((scene_i + 1) == len(scenes)):
                 ## Construct Batch
                 batch_scene = np.concatenate(batch_scene, axis=1)
@@ -310,13 +314,13 @@ class Trainer(object):
 
         return loss.item(), loss_test.item()
 
-def main(epochs=25):
+def main(epochs=5):
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=epochs, type=int,
                         help='number of epochs')
     parser.add_argument('--save_every', default=5, type=int,
                         help='frequency of saving model (in terms of epochs)')
-    parser.add_argument('--obs_length', default=9, type=int,
+    parser.add_argument('--obs_length', default=8, type=int,
                         help='observation length')
     parser.add_argument('--pred_length', default=12, type=int,
                         help='prediction length')
@@ -331,7 +335,7 @@ def main(epochs=25):
                         help='output file')
     parser.add_argument('--disable-cuda', action='store_true',
                         help='disable CUDA')
-    parser.add_argument('--path', default='trajdata',
+    parser.add_argument('--path', default='synth_data',
                         help='glob expression for data files')
     parser.add_argument('--goals', action='store_true',
                         help='flag to consider goals of pedestrians')
@@ -453,7 +457,10 @@ def main(epochs=25):
         args.load_state = args.load_full_state
 
     # add args.device
+    ##################### IF use CPU #####################
     args.device = torch.device('cpu')
+
+    ##################### IF use GPU #####################
     # if not args.disable_cuda and torch.cuda.is_available():
     #     args.device = torch.device('cuda')
 

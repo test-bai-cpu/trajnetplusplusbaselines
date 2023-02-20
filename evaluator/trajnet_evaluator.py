@@ -38,6 +38,9 @@ class TrajnetEvaluator:
 
         self.pred_length = args.pred_length
         self.obs_length = args.obs_length
+        # self.pred_length = 20
+        # self.obs_length = 8
+        print(self.pred_length, self.obs_length)
         self.disable_collision = args.disable_collision
         self.enable_col1 = True
 
@@ -77,11 +80,24 @@ class TrajnetEvaluator:
             primary_tracks = [t for t in primary_tracks_all if t.prediction_number == 0]
             neighbours_tracks = [[t for t in neighbours_tracks_all[j] if t.prediction_number == 0] for j in range(len(neighbours_tracks_all))]
 
-            frame_gt = [t.frame for t in ground_truth[0]][-self.pred_length:]
+            frame_gt = [t.frame for t in ground_truth[0]][self.obs_length:self.obs_length + self.pred_length]
             frame_pred = [t.frame for t in primary_tracks]
+
+            print("-------" + str(self.pred_length) + "-------")
+            print("-----grount truth------")
+            a = [t.frame for t in ground_truth[0]]
+            print(a)
+            print(a[-20:])
+
+            print(ground_truth)
+            # print("## primary track ##")
+            # print(primary_tracks)
+            # print("pred length: ", self.pred_length)
 
             ## To verify if same scene
             if frame_gt != frame_pred:
+                print(self.pred_length)
+                print(self.obs_length)
                 print("Frame id Groud truth: ", frame_gt)
                 print("Frame id Predictions: ", frame_pred)
                 raise Exception('frame numbers are not consistent')
@@ -106,10 +122,13 @@ class TrajnetEvaluator:
                             sub_score[sub_type].gt_col += 1
                         break
 
+
                 ## Collision in Predictions
                 # [Col-I] only if neighs in gt = neighs in prediction
                 num_gt_neigh = len(ground_truth) - 1
                 num_predicted_neigh = len(neighbours_tracks)
+                # print("---------------")
+                # print(num_gt_neigh, num_predicted_neigh)
                 if num_gt_neigh != num_predicted_neigh:
                     print("The model does not predict all neighbours in the scene")
                     self.enable_col1 = False
@@ -238,7 +257,8 @@ def trajnet_evaluate(args):
     model_names = [model.split('/')[-1].replace('.pkl', '') + '_modes' + str(args.modes) for model in args.output]
     labels = args.labels if args.labels is not None else model_names
     table = Table()
-
+    # args.obs_length = 8
+    # args.pred_length = 40
     for num, model_name in enumerate(model_names):
         print(model_name)
         model_preds = sorted([f for f in os.listdir(args.path + model_name) if not f.startswith('.')])
@@ -249,6 +269,9 @@ def trajnet_evaluate(args):
 
         pred_datasets = [args.path + model_name + '/' + f for f in model_preds if 'collision_test.ndjson' not in f]
         true_datasets = [args.path.replace('pred', 'private') + f for f in model_preds if 'collision_test.ndjson' not in f]
+
+        print("pred_datasets: ", pred_datasets)
+        print("true_datasets: ", true_datasets)
 
         # Evaluate predicted datasets with True Datasets
         results = {pred_datasets[i].replace(args.path, '').replace('.ndjson', ''):
