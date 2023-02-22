@@ -67,7 +67,7 @@ def get_predictions(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--path', default='trajdata',
+    parser.add_argument('--path', default='synth_data',
                         help='directory of data to test')
     parser.add_argument('--output', nargs='+',
                         help='relative path to saved model')

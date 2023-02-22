@@ -314,7 +314,7 @@ class Trainer(object):
 
         return loss.item(), loss_test.item()
 
-def main(epochs=5):
+def main(epochs=25):
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=epochs, type=int,
                         help='number of epochs')
@@ -458,11 +458,11 @@ def main(epochs=5):
 
     # add args.device
     ##################### IF use CPU #####################
-    args.device = torch.device('cpu')
+    # args.device = torch.device('cpu')
 
     ##################### IF use GPU #####################
-    # if not args.disable_cuda and torch.cuda.is_available():
-    #     args.device = torch.device('cuda')
+    if torch.cuda.is_available():
+        args.device = torch.device('cuda')
 
     args.path = 'DATA_BLOCK/' + args.path
     ## Prepare data

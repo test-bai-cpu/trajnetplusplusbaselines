@@ -83,13 +83,13 @@ class TrajnetEvaluator:
             frame_gt = [t.frame for t in ground_truth[0]][self.obs_length:self.obs_length + self.pred_length]
             frame_pred = [t.frame for t in primary_tracks]
 
-            print("-------" + str(self.pred_length) + "-------")
-            print("-----grount truth------")
-            a = [t.frame for t in ground_truth[0]]
-            print(a)
-            print(a[-20:])
+            # print("-------" + str(self.pred_length) + "-------")
+            # print("-----grount truth------")
+            # a = [t.frame for t in ground_truth[0]]
+            # print(a)
+            # print(a[-20:])
 
-            print(ground_truth)
+            # print(ground_truth)
             # print("## primary track ##")
             # print(primary_tracks)
             # print("pred length: ", self.pred_length)
@@ -260,7 +260,7 @@ def trajnet_evaluate(args):
     # args.obs_length = 8
     # args.pred_length = 40
     for num, model_name in enumerate(model_names):
-        print(model_name)
+        # print(model_name)
         model_preds = sorted([f for f in os.listdir(args.path + model_name) if not f.startswith('.')])
 
         # Simple Collision Test (if present in test_private)
