@@ -22,8 +22,8 @@ class Metrics:
         self.nll = nll
 
     def __iadd__(self, other):
-        self.N += other.N 
-        self.average_l2 += other.average_l2 
+        self.N += other.N
+        self.average_l2 += other.average_l2
         self.final_l2 += other.final_l2
         self.gt_col += other.gt_col
         if (other.pred_col == -1) or (self.pred_col == -1):

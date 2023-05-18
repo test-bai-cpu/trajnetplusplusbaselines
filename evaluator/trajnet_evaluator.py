@@ -5,6 +5,9 @@ import argparse
 import pickle
 from joblib import Parallel, delayed
 import scipy
+import numpy as np
+import pandas as pd
+from tqdm import tqdm
 
 import trajnetplusplustools
 from evaluator.design_table import Table
@@ -44,16 +47,20 @@ class TrajnetEvaluator:
         self.disable_collision = args.disable_collision
         self.enable_col1 = True
 
-    def aggregate(self):
+    def aggregate(self, date_num, model_name, dataset_name, sample_num, batch_str):
 
+        print("In aggregate, for ", date_num, model_name, dataset_name)
         average, final, average_topk_ade, average_topk_fde, average_nll = [0.0]*5
+        average_list = []
+        final_list = []
+        personid_list = []
 
         ## Aggregates ADE, FDE and Collision in GT & Pred, Topk ADE-FDE , NLL for each category & sub_category
         score = {i:Metrics(*[0]*8) for i in range(1,5)}
         sub_score = {i:Metrics(*[0]*8) for i in range(1,5)}
         
         ## Iterate
-        for i in range(len(self.scenes_gt)):
+        for i in tqdm(range(len(self.scenes_gt))):
             ground_truth = self.scenes_gt[i]
 
             ## Get Keys and Sub_keys
@@ -72,13 +79,13 @@ class TrajnetEvaluator:
 
             ## Extract Prediction Frames
             primary_tracks_all = [t for t in self.scenes_pred[i][0] if t.scene_id == self.scenes_id_gt[i]]
-            neighbours_tracks_all = [[t for t in self.scenes_pred[i][j] if t.scene_id == self.scenes_id_gt[i]] for j in range(1, len(self.scenes_pred[i]))]
-            neighbours_tracks_all = [track for track in neighbours_tracks_all if len(track)]   # Required for overlapping scenes
+            # neighbours_tracks_all = [[t for t in self.scenes_pred[i][j] if t.scene_id == self.scenes_id_gt[i]] for j in range(1, len(self.scenes_pred[i]))]
+            # neighbours_tracks_all = [track for track in neighbours_tracks_all if len(track)]   # Required for overlapping scenes
 
             ##### --------------------------------------------------- SINGLE -------------------------------------------- ####
 
             primary_tracks = [t for t in primary_tracks_all if t.prediction_number == 0]
-            neighbours_tracks = [[t for t in neighbours_tracks_all[j] if t.prediction_number == 0] for j in range(len(neighbours_tracks_all))]
+            # neighbours_tracks = [[t for t in neighbours_tracks_all[j] if t.prediction_number == 0] for j in range(len(neighbours_tracks_all))]
 
             frame_gt = [t.frame for t in ground_truth[0]][self.obs_length:self.obs_length + self.pred_length]
             frame_pred = [t.frame for t in primary_tracks]
@@ -96,10 +103,14 @@ class TrajnetEvaluator:
 
             ## To verify if same scene
             if frame_gt != frame_pred:
-                print(self.pred_length)
-                print(self.obs_length)
-                print("Frame id Groud truth: ", frame_gt)
-                print("Frame id Predictions: ", frame_pred)
+                # print("scene id is: ", self.scenes_id_gt[i])
+                # print("--¤¤¤¤¤¤¤¤-")
+                # print(self.scenes_pred)
+                # print("----¤¤¤¤¤--")
+                # print(self.pred_length)
+                # print(self.obs_length)
+                # print("Frame id Groud truth: ", frame_gt)
+                # print("Frame id Predictions: ", frame_pred)
                 raise Exception('frame numbers are not consistent')
 
             average_l2 = trajnetplusplustools.metrics.average_l2(ground_truth[0], primary_tracks, n_predictions=self.pred_length)
@@ -110,45 +121,50 @@ class TrajnetEvaluator:
             for sub_type in sub_types:
                 sub_score[sub_type].N += 1
 
-            if not self.disable_collision:
-                ground_truth = self.drop_post_obs(ground_truth, self.obs_length)
-                ## Collisions in GT
-                # person_radius=0.1
-                for j in range(1, len(ground_truth)):
-                    if trajnetplusplustools.metrics.collision(primary_tracks, ground_truth[j], n_predictions=self.pred_length):
-                        self.metrics.gt_col += 1
-                        score[curr_type].gt_col += 1
-                        for sub_type in sub_types:
-                            sub_score[sub_type].gt_col += 1
-                        break
+            # if not self.disable_collision:
+            #     ground_truth = self.drop_post_obs(ground_truth, self.obs_length)
+            #     ## Collisions in GT
+            #     # person_radius=0.1
+            #     for j in range(1, len(ground_truth)):
+            #         if trajnetplusplustools.metrics.collision(primary_tracks, ground_truth[j], n_predictions=self.pred_length):
+            #             self.metrics.gt_col += 1
+            #             score[curr_type].gt_col += 1
+            #             for sub_type in sub_types:
+            #                 sub_score[sub_type].gt_col += 1
+            #             break
 
 
-                ## Collision in Predictions
-                # [Col-I] only if neighs in gt = neighs in prediction
-                num_gt_neigh = len(ground_truth) - 1
-                num_predicted_neigh = len(neighbours_tracks)
+                # ## Collision in Predictions
+                # # [Col-I] only if neighs in gt = neighs in prediction
+                # num_gt_neigh = len(ground_truth) - 1
+                # num_predicted_neigh = len(neighbours_tracks)
                 # print("---------------")
                 # print(num_gt_neigh, num_predicted_neigh)
-                if num_gt_neigh != num_predicted_neigh:
-                    print("The model does not predict all neighbours in the scene")
-                    self.enable_col1 = False
-                    self.metrics.pred_col = -1
-                    score[curr_type].pred_col = -1
-                    for sub_type in sub_types:
-                        sub_score[sub_type].pred_col = -1
+                # if num_gt_neigh != num_predicted_neigh:
+                #     # print("The model does not predict all neighbours in the scene")
+                #     self.enable_col1 = False
+                #     self.metrics.pred_col = -1
+                #     score[curr_type].pred_col = -1
+                #     for sub_type in sub_types:
+                #         sub_score[sub_type].pred_col = -1
 
-                if self.enable_col1:
-                    for j in range(len(neighbours_tracks)):
-                        if trajnetplusplustools.metrics.collision(primary_tracks, neighbours_tracks[j], n_predictions=self.pred_length):
-                            self.metrics.pred_col += 1
-                            score[curr_type].pred_col += 1
-                            for sub_type in sub_types:
-                                sub_score[sub_type].pred_col += 1
-                            break
+                # if self.enable_col1:
+                #     for j in range(len(neighbours_tracks)):
+                #         if trajnetplusplustools.metrics.collision(primary_tracks, neighbours_tracks[j], n_predictions=self.pred_length):
+                #             self.metrics.pred_col += 1
+                #             score[curr_type].pred_col += 1
+                #             for sub_type in sub_types:
+                #                 sub_score[sub_type].pred_col += 1
+                #             break
 
             # aggregate FDE and ADE
             average += average_l2
             final += final_l2
+            average_list.append(average_l2)
+            final_list.append(final_l2)
+            
+            personid = primary_tracks[0].pedestrian
+            personid_list.append(personid)
 
             score[curr_type].average_l2 += average_l2
             score[curr_type].final_l2 += final_l2
@@ -183,6 +199,23 @@ class TrajnetEvaluator:
                     sub_score[sub_type].nll += nll
             ##### --------------------------------------------------- NLL -------------------------------------------- ####
 
+        average_arr = np.array(average_list)
+        final_arr = np.array(final_list)
+        personid_arr = np.array(personid_list)
+        df = pd.DataFrame({"person_id": personid_arr, "ADE_mean": average_arr, "FDE_mean": final_arr})
+        model_path = model_name.split("_")[1]
+        
+        ## To update the location of atc_result, for example. Because if I want to have std of all ped's pred result, need individual pred res.
+        # save_dir = "/home/yufei/research/trajnet++/" + dataset_name + "_results/" + model_path + "_workshop_pred_" + str(self.pred_length) + "_full_1024/"  + batch_str
+        save_dir = "/home/yufei/research/trajnet++/" + dataset_name + "_results/" + model_path + "_sgan_pred_" + str(self.pred_length)
+        
+        os.makedirs(save_dir, exist_ok=True)
+        
+        # save_name =  date_num + "-pred-" + str(self.pred_length) + "-sam-" + str(sample_num) + ".csv"
+        save_name =  date_num + "-pred-" + str(self.pred_length) + ".csv"
+        
+        df.to_csv(save_dir + "/" + save_name, index=False)
+        
         # Adding value to dict
         self.metrics.average_l2 = average
         self.metrics.final_l2 = final
@@ -225,7 +258,14 @@ def collision_test(list_sub, name, args):
 
     return "NA"
 
-def eval(gt, input_file, args):
+def eval(gt, input_file, model_name, args):
+    print("Now in eval")
+    #### get date of edin ####
+    date_num = input_file.split("/")[-1].split(".")[0]
+    
+    #### get date of atc ####
+    date_num = input_file.split("/")[-1].split(".")[0]
+    
     # Ground Truth
     reader_gt = trajnetplusplustools.Reader(gt, scene_type='paths')
     scenes_gt = [s for _, s in reader_gt.scenes()]
@@ -234,6 +274,8 @@ def eval(gt, input_file, args):
     # Scene Predictions
     reader_pred = trajnetplusplustools.Reader(input_file, scene_type='paths')
     scenes_pred = [s for _, s in reader_pred.scenes()]
+
+    # print("length of both gt and pred: ", len(scenes_gt), len(scenes_pred))
 
     ## sub_indexes, indexes is dictionary deciding which scenes are in which type
     indexes = defaultdict(list)
@@ -247,18 +289,21 @@ def eval(gt, input_file, args):
             sub_indexes[sub_type].append(scene)
 
     # Evaluate
+    print("Now in evaluate1")
     evaluator = TrajnetEvaluator(scenes_gt, scenes_id_gt, scenes_pred, indexes, sub_indexes, args)
-    evaluator.aggregate()
+    evaluator.aggregate(date_num, model_name, args.dataset, args.sample_num, args.batch_str)
     result = evaluator.result()
     return result
 
 def trajnet_evaluate(args):
+    print("Now in trajnet evaluate 1")
     """Evaluates test_pred against test_private"""
     model_names = [model.split('/')[-1].replace('.pkl', '') + '_modes' + str(args.modes) for model in args.output]
     labels = args.labels if args.labels is not None else model_names
     table = Table()
     # args.obs_length = 8
     # args.pred_length = 40
+    # print("try: ", args.obs_length, args.pred_length)
     for num, model_name in enumerate(model_names):
         # print(model_name)
         model_preds = sorted([f for f in os.listdir(args.path + model_name) if not f.startswith('.')])
@@ -270,12 +315,20 @@ def trajnet_evaluate(args):
         pred_datasets = [args.path + model_name + '/' + f for f in model_preds if 'collision_test.ndjson' not in f]
         true_datasets = [args.path.replace('pred', 'private') + f for f in model_preds if 'collision_test.ndjson' not in f]
 
-        print("pred_datasets: ", pred_datasets)
-        print("true_datasets: ", true_datasets)
+        # print("pred_datasets: ", pred_datasets)
+        # print("true_datasets: ", true_datasets)
 
         # Evaluate predicted datasets with True Datasets
         results = {pred_datasets[i].replace(args.path, '').replace('.ndjson', ''):
-                   eval(true_datasets[i], pred_datasets[i], args) for i in range(len(true_datasets))}
+                   eval(true_datasets[i], pred_datasets[i], model_name, args) for i in range(len(true_datasets))}
+        
+        # results = {}
+        # for i in range(len(true_datasets)):
+        # # for i in range(1):
+        #     pred_name = pred_datasets[i].replace(args.path, '').replace('.ndjson', '')
+        #     result_i = eval(true_datasets[i], pred_datasets[i], model_name, args)
+        #     results[pred_name] = result_i
+            
 
         # Add results to Table
         final_result, sub_final_result = table.add_entry(labels[num], results)

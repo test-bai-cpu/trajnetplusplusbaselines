@@ -27,7 +27,7 @@ from .data_load_utils import prepare_data
 
 class Trainer(object):
     def __init__(self, model=None, criterion=None, optimizer=None, lr_scheduler=None,
-                 device=None, batch_size=8, obs_length=9, pred_length=12, augment=True,
+                 device=None, batch_size=8, obs_length=8, pred_length=12, augment=True,
                  normalize_scene=False, save_every=1, start_length=0, obs_dropout=False,
                  augment_noise=False, val_flag=True):
         self.model = model if model is not None else LSTM()
@@ -112,8 +112,10 @@ class Trainer(object):
             ##process scene
             if self.normalize_scene:
                 scene, _, _, scene_goal = center_scene(scene, self.obs_length, goals=scene_goal)
+                # print("normalize, ", scene_goal)
             if self.augment:
                 scene, scene_goal = random_rotation(scene, goals=scene_goal)
+                # print("augment, ", scene_goal)
             if self.augment_noise:
                 scene = augmentation.add_noise(scene, thresh=0.02, ped='neigh')
 
@@ -148,15 +150,15 @@ class Trainer(object):
                 batch_scene_goal = []
                 batch_split = [0]
 
-            if (scene_i + 1) % (10*self.batch_size) == 0:
-                self.log.info({
-                    'type': 'train',
-                    'epoch': epoch, 'batch': scene_i, 'n_batches': len(scenes),
-                    'time': round(total_time, 3),
-                    'data_time': round(preprocess_time, 3),
-                    'lr': self.get_lr(),
-                    'loss': round(loss, 3),
-                })
+            # if (scene_i + 1) % (10*self.batch_size) == 0:
+            #     self.log.info({
+            #         'type': 'train',
+            #         'epoch': epoch, 'batch': scene_i, 'n_batches': len(scenes),
+            #         'time': round(total_time, 3),
+            #         'data_time': round(preprocess_time, 3),
+            #         'lr': round(self.get_lr(),3),
+            #         'loss': round(loss, 3),
+            #     })
 
         self.lr_scheduler.step()
         self.log.info({
@@ -231,6 +233,7 @@ class Trainer(object):
         })
 
     def train_batch(self, batch_scene, batch_scene_goal, batch_split):
+        # print(batch_split)
         """Training of B batches in parallel, B : batch_size
 
         Parameters
@@ -327,7 +330,7 @@ def main(epochs=25):
     parser.add_argument('--start_length', default=0, type=int,
                         help='starting time step of encoding observation')
     parser.add_argument('--batch_size', default=8, type=int)
-    parser.add_argument('--lr', default=1e-3, type=float,
+    parser.add_argument('--lr', default=0.003, type=float,
                         help='initial learning rate')
     parser.add_argument('--step_size', default=10, type=int,
                         help='step_size of lr scheduler')

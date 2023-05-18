@@ -16,6 +16,7 @@ def predict_scene(predictor, model_name, paths, scene_goal, args):
     """For each scene, get model predictions"""
     paths = preprocess_test(paths, args.obs_length)
     predictions = predictor(paths, scene_goal, n_predict=args.pred_length, obs_length=args.obs_length, modes=args.modes, args=args)
+    # print(predictions)
     return predictions
 
 
@@ -30,10 +31,12 @@ def get_predictions(args):
     """Get model predictions for each test scene and write the predictions in appropriate folders"""
     ## List of .json file inside the args.path (waiting to be predicted by the testing model)
     datasets = sorted([f.split('.')[-2] for f in os.listdir(args.path.replace('_pred', '')) if not f.startswith('.') and f.endswith('.ndjson')])
+    print(datasets)
 
     ## Extract Model names from arguments and create its own folder in 'test_pred' for storing predictions
     ## WARNING: If Model predictions already exist from previous run, this process SKIPS WRITING
     for model in args.output:
+        print("model is: ", model)
         model_name = model.split('/')[-1].replace('.pkl', '')
         model_name = model_name + '_modes' + str(args.modes)
 
@@ -53,6 +56,8 @@ def get_predictions(args):
 
         # Iterate over test datasets
         for dataset in datasets:
+        # for i in range(1):
+            # dataset = datasets[i]
             # Load dataset
             dataset_name, scenes, scene_goals = load_test_datasets(dataset, goal_flag, args)
 
@@ -85,6 +90,12 @@ def main():
                         help='augment scenes')
     parser.add_argument('--modes', default=1, type=int,
                         help='number of modes to predict')
+    parser.add_argument('--dataset', type=str,
+                        help='dataset name')
+    parser.add_argument('--sample_num', type=int,
+                        help='sample number, like 100, 200, i.e., how many trajs used for train+val')
+    parser.add_argument('--batch_str', type=str,
+                        help='batch str like b0, b1, b2..., b9')
     args = parser.parse_args()
 
     scipy.seterr('ignore')

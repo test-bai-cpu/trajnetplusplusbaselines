@@ -512,6 +512,7 @@ def main(epochs=25):
                                  help='number of samples for variety loss')
     args = parser.parse_args()
 
+    # print("Yufei test: ", args.path)
     ## Set seed for reproducibility
     torch.manual_seed(args.seed)
     random.seed(args.seed)
@@ -549,15 +550,18 @@ def main(epochs=25):
         args.load_state = args.load_full_state
 
     # add args.device
-    args.device = torch.device('cpu')
+    # args.device = torch.device('cpu')
     # if not args.disable_cuda and torch.cuda.is_available():
     #     args.device = torch.device('cuda')
+    if torch.cuda.is_available():
+        args.device = torch.device('cuda')
 
     args.path = 'DATA_BLOCK/' + args.path
     ## Prepare data
     train_scenes, train_goals, _ = prepare_data(args.path, subset='/train/', sample=args.sample, goals=args.goals)
     val_scenes, val_goals, val_flag = prepare_data(args.path, subset='/val/', sample=args.sample, goals=args.goals)
 
+    # print("Yufei test: ", args.path)
     ## pretrained pool model (if any)
     pretrained_pool = None
 

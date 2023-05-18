@@ -29,6 +29,7 @@ def prepare_data(path, subset='/train/', sample=1.0, goals=True):
 
     ## Check if folder exists
     if not os.path.isdir(path + subset):
+        # print(path + subset)
         if 'train' in subset:
             print("Train folder does NOT exist")
             exit()
